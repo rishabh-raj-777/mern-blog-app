@@ -16,8 +16,18 @@ const App = () => {
   }, []);
 
   return (
-    <div>
-      <h1>Blog</h1>
+    <div
+      style={{
+        backgroundImage: "url('/background.jpg')",
+        backgroundSize: 'cover',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+        minHeight: '100vh',
+        padding: '20px',
+        color: 'white',
+      }}
+    >
+      <h1 style={{ textAlign: 'center' }}>Blog</h1>
       <PostForm onPostCreated={fetchPosts} />
       <PostList posts={posts} onPostDeleted={fetchPosts} />
     </div>
