@@ -6,21 +6,37 @@ const PostForm = ({ onPostCreated }) => {
   const [content, setContent] = useState('');
   const [image, setImage] = useState('');
 
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   if (!title || !content) return;
+
+  //   await axios.post('http://localhost:5000/api/posts', {
+  //     title,
+  //     content,
+  //     image
+  //   });
+
+  //   setTitle('');
+  //   setContent('');
+  //   setImage('');
+  //   onPostCreated();
+  // };
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!title || !content) return;
+  e.preventDefault();
+  if (!title || !content) return;
 
-    await axios.post('http://localhost:5000/api/posts', {
-      title,
-      content,
-      image
-    });
+  await axios.post(`${process.env.REACT_APP_API_URL}/api/posts`, {
+    title,
+    content,
+    image
+  });
 
-    setTitle('');
-    setContent('');
-    setImage('');
-    onPostCreated();
-  };
+  setTitle('');
+  setContent('');
+  setImage('');
+  onPostCreated();
+};
+
 
   return (
     <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
