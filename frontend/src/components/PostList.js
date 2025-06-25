@@ -1,22 +1,48 @@
 import React from 'react';
-import axios from 'axios';
 
 const PostList = ({ posts, onPostDeleted }) => {
-  const deletePost = async (id) => {
-    await axios.delete(`http://localhost:5000/api/posts/${id}`);
+  const handleDelete = async (id) => {
+    await fetch(`http://localhost:5000/api/posts/${id}`, { method: 'DELETE' });
     onPostDeleted();
   };
 
   return (
-    <ul>
+    <div>
       {posts.map((post) => (
-        <li key={post._id}>
-          <h3>{post.title}</h3>
-          <p>{post.content}</p>
-          <button onClick={() => deletePost(post._id)}>Delete</button>
-        </li>
+        <div
+          key={post._id}
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            marginBottom: '20px',
+            border: '1px solid #ccc',
+            padding: '15px',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(255,255,255,0.8)'
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <h3>{post.title}</h3>
+            <p>{post.content}</p>
+            <button onClick={() => handleDelete(post._id)}>Delete</button>
+          </div>
+          {post.image && (
+            <img
+              src={post.image}
+              alt="Blog"
+              style={{
+                width: '200px',
+                height: 'auto',
+                objectFit: 'cover',
+                marginLeft: '20px',
+                borderRadius: '6px'
+              }}
+            />
+          )}
+        </div>
       ))}
-    </ul>
+    </div>
   );
 };
 

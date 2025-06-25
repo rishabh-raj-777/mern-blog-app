@@ -4,20 +4,49 @@ import axios from 'axios';
 const PostForm = ({ onPostCreated }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [image, setImage] = useState('');
 
-  const submit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    await axios.post('http://localhost:5000/api/posts', { title, content });
+    if (!title || !content) return;
+
+    await axios.post('http://localhost:5000/api/posts', {
+      title,
+      content,
+      image
+    });
+
     setTitle('');
     setContent('');
+    setImage('');
     onPostCreated();
   };
 
   return (
-    <form onSubmit={submit}>
-      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
-      <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Content" />
-      <button type="submit">Create Post</button>
+    <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
+      <input
+        type="text"
+        placeholder="Title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        style={{ display: 'block', width: '100%', marginBottom: '10px' }}
+        required
+      />
+      <textarea
+        placeholder="Content"
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        style={{ display: 'block', width: '100%', marginBottom: '10px' }}
+        required
+      />
+      <input
+        type="text"
+        placeholder="Image URL"
+        value={image}
+        onChange={(e) => setImage(e.target.value)}
+        style={{ display: 'block', width: '100%', marginBottom: '10px' }}
+      />
+      <button type="submit">Post</button>
     </form>
   );
 };
