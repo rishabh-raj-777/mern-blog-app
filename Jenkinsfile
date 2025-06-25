@@ -9,7 +9,7 @@ pipeline {
   stages {
     stage('Clone Repository') {
       steps {
-        git 'https://github.com/rishabh-raj-777/mern-blog-app.git'
+        git branch: 'main', url: 'https://github.com/rishabh-raj-777/mern-blog-app.git'
       }
     }
 
