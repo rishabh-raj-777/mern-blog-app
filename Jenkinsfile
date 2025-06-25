@@ -13,39 +13,50 @@ pipeline {
       }
     }
 
-    stage('Build Frontend Image') {
+    stage('Build Docker Images') {
       steps {
-        dir('frontend') {
-          sh 'docker build -t $IMAGE_FRONTEND:latest .'
-        }
+        bat 'docker-compose build'
       }
     }
 
-    stage('Build Backend Image') {
+    stage('Push to Docker Hub') {
       steps {
-        dir('backend') {
-          sh 'docker build -t $IMAGE_BACKEND:latest .'
-        }
-      }
-    }
-
-    stage('Push to DockerHub') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-          sh '''
-            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-            docker push $IMAGE_FRONTEND:latest
-            docker push $IMAGE_BACKEND:latest
+        withCredentials([usernamePassword(
+          credentialsId: 'docker-hub-creds',
+          usernameVariable: 'DOCKER_USER',
+          passwordVariable: 'DOCKER_PASS'
+        )]) {
+          bat '''
+            echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+            docker push %IMAGE_FRONTEND%
+            docker push %IMAGE_BACKEND%
           '''
         }
       }
     }
 
-    stage('Deploy with Docker Compose') {
+    stage('Deploy Containers') {
       steps {
-        sh 'docker-compose down'
-        sh 'docker-compose up -d --build'
+        bat '''
+          docker-compose down || exit 0
+          docker-compose up -d
+        '''
       }
+    }
+
+    stage('Verify') {
+      steps {
+        bat 'docker ps'
+      }
+    }
+  }
+
+  post {
+    success {
+      echo '✅ MERN app deployed successfully!'
+    }
+    failure {
+      echo '❌ Deployment failed.'
     }
   }
 }
