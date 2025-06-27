@@ -13,6 +13,17 @@ pipeline {
       }
     }
 
+    stage('Inject Mongo URI') {
+      steps {
+        withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
+          bat '''
+            echo Creating .env file with MONGO_URI...
+            echo MONGO_URI=%MONGO_URI% > backend/.env
+          '''
+        }
+      }
+    }
+
     stage('Build Docker Images') {
       steps {
         bat 'docker-compose build'
