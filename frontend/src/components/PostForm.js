@@ -25,7 +25,7 @@ const PostForm = ({ onPostCreated }) => {
   e.preventDefault();
   if (!title || !content) return;
 
-  await axios.post(`http://localhost:5000/api/posts`, {
+  await axios.post(`http://10.10.1.50:5000/api/posts`, {
     title,
     content,
     image

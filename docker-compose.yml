@@ -2,13 +2,15 @@ version: '3.8'
 
 services:
   mongo:
-    image: mongo:6.0
+    image: mongo:4.4.24-focal  # ✅ Lightweight and avoids AVX issue
     container_name: mongo
     restart: always
     ports:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
+    networks:
+      - blog-net
 
   backend:
     image: rishabhraj7/blog-backend
@@ -19,9 +21,12 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - MONGO_URI=mongodb://mongo:27017/blog
+      - MONGO_URI=mongodb+srv://rrb020:3OscOG4GSGCvueT6@my-cluster-1.lemfq0m.mongodb.net/blog-app
+
     depends_on:
       - mongo
+    networks:
+      - blog-net
 
   frontend:
     image: rishabhraj7/blog-frontend
@@ -30,9 +35,15 @@ services:
       context: ./frontend
     restart: always
     ports:
-      - "3000:3000"
+      - "3005:3005"
     depends_on:
       - backend
+    networks:
+      - blog-net
 
 volumes:
   mongo-data:
+
+networks:
+  blog-net:
+    driver: bridge
