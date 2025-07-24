@@ -11,4 +11,5 @@ RUN npm run build
 RUN npm install -g serve
 
 EXPOSE 3005
-CMD ["serve", "-s", "build"]
+
+CMD ["serve", "-s", "build", "-l", "3005"]
