@@ -4,7 +4,7 @@ services:
   mongo:
     image: mongo:4.4.24-focal  # ✅ Lightweight and avoids AVX issue
     container_name: mongo
-    restart: always
+    restart: unless-stopped
     ports:
       - "27017:27017"
     volumes:
@@ -17,11 +17,11 @@ services:
     container_name: backend
     build:
       context: ./backend
-    restart: always
+    restart: unless-stopped
     ports:
       - "5000:5000"
     environment:
-      - MONGO_URI=mongodb+srv://rrb020:3OscOG4GSGCvueT6@my-cluster-1.lemfq0m.mongodb.net/blog-app
+      - MONGO_URI=${MONGO_URI}
 
     depends_on:
       - mongo
@@ -33,7 +33,7 @@ services:
     container_name: frontend
     build:
       context: ./frontend
-    restart: always
+    restart: unless-stopped
     ports:
       - "3005:3005"
     depends_on:
