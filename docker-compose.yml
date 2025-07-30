@@ -1,16 +1,16 @@
 version: '3.8'
 
 services:
-  mongo:
-    image: mongo:4.4.24-focal
-    container_name: mongo
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-    networks:
-      - blog-net
+  # mongo:
+  #   image: mongo:4.4.24-focal
+  #   container_name: mongo
+  #   restart: unless-stopped
+  #   ports:
+  #     - "27017:27017"
+  #   volumes:
+  #     - mongo-data:/data/db
+  #   networks:
+  #     - blog-net
 
   backend:
     build:
@@ -22,8 +22,8 @@ services:
       - "5000:5000"
     environment:
       - MONGO_URI=${MONGO_URI}
-    depends_on:
-      - mongo
+    # depends_on:
+    #   - mongo
     networks:
       - blog-net
 
