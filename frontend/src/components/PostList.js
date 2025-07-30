@@ -2,8 +2,12 @@ import React from 'react';
 
 const PostList = ({ posts, onPostDeleted }) => {
   const handleDelete = async (id) => {
-    await fetch(`http://10.10.1.50:5000/api/posts/${id}`, { method: 'DELETE' });
-    onPostDeleted();
+    try {
+      await fetch(`/api/posts/${id}`, { method: 'DELETE' });
+      onPostDeleted();
+    } catch (err) {
+      console.error("Failed to delete post:", err.message);
+    }
   };
 
   return (

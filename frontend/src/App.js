@@ -6,10 +6,18 @@ import axios from 'axios';
 const App = () => {
   const [posts, setPosts] = useState([]);
 
-  const fetchPosts = async () => {
-    const res = await axios.get('http://10.10.1.50:5000/api/posts');
-    setPosts(res.data);
-  };
+  // const fetchPosts = async () => {
+  //   const res = await axios.get('http://10.10.1.50:5000/api/posts');
+  //   setPosts(res.data);
+  // };
+      const fetchPosts = async () => {
+        try {
+          const res = await axios.get('/api/posts');
+          setPosts(res.data);
+        } catch (err) {
+          console.error("Failed to fetch posts:", err.message);
+        }
+      };
 
   useEffect(() => {
     fetchPosts();
