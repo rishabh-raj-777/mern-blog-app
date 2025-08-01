@@ -49,7 +49,7 @@ pipeline {
 
     stage('Test SSH Connection to VM') {
       steps {
-        sshagent(['proxmox-key']) {
+        sshagent(['proxmox-ssh']) {
           bat """
             ssh -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
             "echo ✅ SSH connection successful && hostname && whoami"
@@ -61,7 +61,7 @@ pipeline {
     stage('Deploy to Proxmox VM') {
       steps {
         withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
-          sshagent(['proxmox-key']) {
+          sshagent(['proxmox-ssh']) {
             bat """
               ssh -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
               "cd %APP_DIR% && \
@@ -78,7 +78,7 @@ pipeline {
 
     stage('Verify Deployment on VM') {
       steps {
-        sshagent(['proxmox-key']) {
+        sshagent(['proxmox-ssh']) {
           bat """
             ssh -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
             "docker ps"
