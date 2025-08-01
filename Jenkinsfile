@@ -20,14 +20,17 @@ pipeline {
     stage('Inject Mongo URI (Local)') {
       steps {
         withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
-          bat "echo MONGO_URI=%MONGO_URI% > backend\\.env"
+          sh '''
+            mkdir -p backend
+            echo MONGO_URI=$MONGO_URI > backend/.env
+          '''
         }
       }
     }
 
     stage('Build Docker Images (Local)') {
       steps {
-        bat 'docker-compose build'
+        sh 'docker-compose build'
       }
     }
 
@@ -38,11 +41,11 @@ pipeline {
           usernameVariable: 'DOCKER_USER',
           passwordVariable: 'DOCKER_PASS'
         )]) {
-          bat """
-            echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-            docker push %IMAGE_FRONTEND%
-            docker push %IMAGE_BACKEND%
-          """
+          sh '''
+            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+            docker push $IMAGE_FRONTEND
+            docker push $IMAGE_BACKEND
+          '''
         }
       }
     }
@@ -50,10 +53,10 @@ pipeline {
     stage('Test SSH Connection to VM') {
       steps {
         sshagent(['proxmox-ssh']) {
-          bat """
-            ssh -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
-            "echo ✅ SSH connection successful && hostname && whoami"
-          """
+          sh '''
+            ssh -o StrictHostKeyChecking=no $VM_USER@$VM_IP \
+              "echo ✅ SSH connection successful && hostname && whoami"
+          '''
         }
       }
     }
@@ -62,15 +65,16 @@ pipeline {
       steps {
         withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
           sshagent(['proxmox-ssh']) {
-            bat """
-              ssh -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
-              "cd %APP_DIR% && \
-              git pull origin main && \
-              echo MONGO_URI=%MONGO_URI% > backend/.env && \
-              docker-compose down || true && \
-              docker-compose pull && \
-              docker-compose up -d"
-            """
+            sh '''
+              ssh -o StrictHostKeyChecking=no $VM_USER@$VM_IP '
+                cd $APP_DIR &&
+                git pull origin main &&
+                echo MONGO_URI=$MONGO_URI > backend/.env &&
+                docker-compose down || true &&
+                docker-compose pull &&
+                docker-compose up -d
+              '
+            '''
           }
         }
       }
@@ -79,10 +83,10 @@ pipeline {
     stage('Verify Deployment on VM') {
       steps {
         sshagent(['proxmox-ssh']) {
-          bat """
-            ssh -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
-            "docker ps"
-          """
+          sh '''
+            ssh -o StrictHostKeyChecking=no $VM_USER@$VM_IP \
+              "docker ps"
+          '''
         }
       }
     }
