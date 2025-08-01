@@ -65,16 +65,16 @@ pipeline {
       steps {
         withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
           sshagent(['proxmox-ssh']) {
-            sh '''
-              ssh -o StrictHostKeyChecking=no $VM_USER@$VM_IP '
+            sh """
+              ssh -o StrictHostKeyChecking=no $VM_USER@$VM_IP "
                 cd $APP_DIR &&
-                git pull origin main &&
+                git pull origin feature/jenkins &&
                 echo MONGO_URI=$MONGO_URI > backend/.env &&
                 docker-compose down || true &&
                 docker-compose pull &&
                 docker-compose up -d
-              '
-            '''
+              "
+            """
           }
         }
       }
