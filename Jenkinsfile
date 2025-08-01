@@ -21,9 +21,9 @@ pipeline {
     stage('Inject Mongo URI (Local)') {
       steps {
         withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
-          bat """
+          bat '''
             echo MONGO_URI=%MONGO_URI% > backend\\.env
-          """
+          '''
         }
       }
     }
@@ -41,10 +41,21 @@ pipeline {
           usernameVariable: 'DOCKER_USER',
           passwordVariable: 'DOCKER_PASS'
         )]) {
-          bat """
+          bat '''
             echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
             docker push %IMAGE_FRONTEND%
             docker push %IMAGE_BACKEND%
+          '''
+        }
+      }
+    }
+
+    stage('Test SSH Connection to VM') {
+      steps {
+        sshagent(['proxmox-ssh']) {
+          bat """
+            ssh -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
+            "echo ✅ SSH Connection to %VM_IP% successful"
           """
         }
       }
@@ -57,11 +68,13 @@ pipeline {
             bat """
               ssh -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
               "cd %APP_DIR% && \
+              git reset --hard && \
+              git clean -fd && \
               git pull origin main && \
               echo MONGO_URI=%MONGO_URI% > backend/.env && \
               docker-compose down || true && \
               docker-compose pull && \
-              docker-compose up -d"
+              docker-compose up -d --remove-orphans"
             """
           }
         }
