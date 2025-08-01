@@ -13,7 +13,7 @@ pipeline {
   stages {
     stage('Clone Repository (Local)') {
       steps {
-        git branch: 'main', url: "${REPO_URL}"
+        git branch: 'feature/jenkins', url: "${REPO_URL}"
       }
     }
 
