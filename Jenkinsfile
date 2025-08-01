@@ -4,70 +4,92 @@ pipeline {
   environment {
     IMAGE_FRONTEND = 'rishabhraj7/blog-frontend'
     IMAGE_BACKEND  = 'rishabhraj7/blog-backend'
+    REPO_URL       = 'https://github.com/rishabh-raj-777/mern-blog-app.git'
+    VM_USER        = 'rishabh123'
+    VM_IP          = '10.10.1.50'
+    APP_DIR        = '/home/rishabh123/apps/mern-blog-app'
   }
 
   stages {
-    stage('Clone Repository') {
+
+    stage('Clone Repository (Local)') {
       steps {
-        git branch: 'main', url: 'https://github.com/rishabh-raj-777/mern-blog-app.git'
+        git branch: 'main', url: "${REPO_URL}"
       }
     }
 
-    stage('Inject Mongo URI') {
+    stage('Inject Mongo URI (Local)') {
       steps {
         withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
-          bat '''
-            echo Creating .env file with MONGO_URI...
-            echo MONGO_URI=%MONGO_URI% > backend/.env
+          sh '''
+            echo "MONGO_URI=${MONGO_URI}" > backend/.env
           '''
         }
       }
     }
 
-    stage('Build Docker Images') {
+    stage('Build Docker Images (Local)') {
       steps {
-        bat 'docker-compose build'
+        sh 'docker-compose build'
       }
     }
 
-    stage('Push to Docker Hub') {
+    stage('Push to Docker Hub (Local)') {
       steps {
         withCredentials([usernamePassword(
           credentialsId: 'docker-hub-creds',
           usernameVariable: 'DOCKER_USER',
           passwordVariable: 'DOCKER_PASS'
         )]) {
-          bat '''
-            echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-            docker push %IMAGE_FRONTEND%
-            docker push %IMAGE_BACKEND%
+          sh '''
+            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+            docker push $IMAGE_FRONTEND
+            docker push $IMAGE_BACKEND
           '''
         }
       }
     }
 
-    stage('Deploy Containers') {
+    stage('Deploy to Proxmox VM') {
       steps {
-        bat '''
-          docker-compose down || exit 0
-          docker-compose up -d
-        '''
+        withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
+          sshagent(['proxmox-ssh']) {
+            sh """
+              ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} '
+                set -e
+                cd ${APP_DIR}
+                git pull origin main
+                echo "MONGO_URI=${MONGO_URI}" > backend/.env
+                docker-compose down || true
+                docker-compose pull
+                docker-compose up -d
+              '
+            """
+          }
+        }
       }
     }
 
-    stage('Verify') {
+    stage('Verify Deployment on VM') {
       steps {
-        bat 'docker ps'
+        sshagent(['proxmox-ssh']) {
+          sh """
+            ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} '
+              echo "✅ Running containers:"
+              docker ps
+            '
+          """
+        }
       }
     }
   }
 
   post {
     success {
-      echo '✅ MERN app deployed successfully!'
+      echo '✅ MERN blog app deployed successfully to Proxmox VM!'
     }
     failure {
-      echo '❌ Deployment failed.'
+      echo '❌ Deployment failed. Check build logs and remote connection.'
     }
   }
 }
