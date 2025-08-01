@@ -8,11 +8,9 @@ pipeline {
     VM_USER        = 'rishabh123'
     VM_IP          = '10.10.1.50'
     APP_DIR        = '/home/rishabh123/apps/mern-blog-app'
-    PRIVATE_KEY    = 'C:/Program Files/Jenkins/.ssh/jenkins_id_rsa'
   }
 
   stages {
-
     stage('Clone Repository (Local)') {
       steps {
         git branch: 'main', url: "${REPO_URL}"
@@ -51,35 +49,41 @@ pipeline {
 
     stage('Test SSH Connection to VM') {
       steps {
-        bat """
-          ssh -i "%PRIVATE_KEY%" -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
-          "echo ✅ SSH connection successful && hostname && whoami"
-        """
+        sshagent(['proxmox-key']) {
+          bat """
+            ssh -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
+            "echo ✅ SSH connection successful && hostname && whoami"
+          """
+        }
       }
     }
 
     stage('Deploy to Proxmox VM') {
       steps {
         withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
-          bat """
-            ssh -i "%PRIVATE_KEY%" -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
-            "cd %APP_DIR% && \
-            git pull origin main && \
-            echo MONGO_URI=%MONGO_URI% > backend/.env && \
-            docker-compose down || true && \
-            docker-compose pull && \
-            docker-compose up -d"
-          """
+          sshagent(['proxmox-key']) {
+            bat """
+              ssh -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
+              "cd %APP_DIR% && \
+              git pull origin main && \
+              echo MONGO_URI=%MONGO_URI% > backend/.env && \
+              docker-compose down || true && \
+              docker-compose pull && \
+              docker-compose up -d"
+            """
+          }
         }
       }
     }
 
     stage('Verify Deployment on VM') {
       steps {
-        bat """
-          ssh -i "%PRIVATE_KEY%" -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
-          "docker ps"
-        """
+        sshagent(['proxmox-key']) {
+          bat """
+            ssh -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
+            "docker ps"
+          """
+        }
       }
     }
   }
