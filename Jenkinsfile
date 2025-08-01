@@ -8,7 +8,7 @@ pipeline {
     VM_USER        = 'rishabh123'
     VM_IP          = '10.10.1.50'
     APP_DIR        = '/home/rishabh123/apps/mern-blog-app'
-    PRIVATE_KEY    = 'C:/Program Files/Jenkins/.ssh/jenkins_id_rsa'  // ✅ fixed path
+    PRIVATE_KEY    = 'C:/Program Files/Jenkins/.ssh/jenkins_id_rsa'
   }
 
   stages {
@@ -22,9 +22,7 @@ pipeline {
     stage('Inject Mongo URI (Local)') {
       steps {
         withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
-          bat '''
-            echo MONGO_URI=%MONGO_URI% > backend\\.env
-          '''
+          bat "echo MONGO_URI=%MONGO_URI% > backend\\.env"
         }
       }
     }
@@ -42,28 +40,28 @@ pipeline {
           usernameVariable: 'DOCKER_USER',
           passwordVariable: 'DOCKER_PASS'
         )]) {
-          bat '''
+          bat """
             echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
             docker push %IMAGE_FRONTEND%
             docker push %IMAGE_BACKEND%
-          '''
+          """
         }
       }
     }
 
     stage('Test SSH Connection to VM') {
       steps {
-        bat '''
+        bat """
           ssh -i "%PRIVATE_KEY%" -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
           "echo ✅ SSH connection successful && hostname && whoami"
-        '''
+        """
       }
     }
 
     stage('Deploy to Proxmox VM') {
       steps {
         withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
-          bat '''
+          bat """
             ssh -i "%PRIVATE_KEY%" -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
             "cd %APP_DIR% && \
             git pull origin main && \
@@ -71,17 +69,17 @@ pipeline {
             docker-compose down || true && \
             docker-compose pull && \
             docker-compose up -d"
-          '''
+          """
         }
       }
     }
 
     stage('Verify Deployment on VM') {
       steps {
-        bat '''
+        bat """
           ssh -i "%PRIVATE_KEY%" -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
           "docker ps"
-        '''
+        """
       }
     }
   }
