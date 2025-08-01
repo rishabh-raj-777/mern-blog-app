@@ -8,6 +8,7 @@ pipeline {
     VM_USER        = 'rishabh123'
     VM_IP          = '10.10.1.50'
     APP_DIR        = '/home/rishabh123/apps/mern-blog-app'
+    PRIVATE_KEY    = '"C:\\Users\\rishabh raj\\jenkins_id_rsa"'  // quotes required due to space
   }
 
   stages {
@@ -21,9 +22,9 @@ pipeline {
     stage('Inject Mongo URI (Local)') {
       steps {
         withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
-          bat '''
+          bat """
             echo MONGO_URI=%MONGO_URI% > backend\\.env
-          '''
+          """
         }
       }
     }
@@ -41,54 +42,46 @@ pipeline {
           usernameVariable: 'DOCKER_USER',
           passwordVariable: 'DOCKER_PASS'
         )]) {
-          bat '''
+          bat """
             echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
             docker push %IMAGE_FRONTEND%
             docker push %IMAGE_BACKEND%
-          '''
+          """
         }
       }
     }
 
     stage('Test SSH Connection to VM') {
       steps {
-        sshagent(['proxmox-ssh']) {
-          bat """
-            ssh -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
-            "echo ✅ SSH Connection to %VM_IP% successful"
-          """
-        }
+        bat """
+          ssh -i %PRIVATE_KEY% -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
+          "echo ✅ SSH connection successful && hostname && whoami"
+        """
       }
     }
 
     stage('Deploy to Proxmox VM') {
       steps {
         withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
-          sshagent(['proxmox-ssh']) {
-            bat """
-              ssh -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
-              "cd %APP_DIR% && \
-              git reset --hard && \
-              git clean -fd && \
-              git pull origin main && \
-              echo MONGO_URI=%MONGO_URI% > backend/.env && \
-              docker-compose down || true && \
-              docker-compose pull && \
-              docker-compose up -d --remove-orphans"
-            """
-          }
+          bat """
+            ssh -i %PRIVATE_KEY% -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
+            "cd %APP_DIR% && \
+            git pull origin main && \
+            echo MONGO_URI=%MONGO_URI% > backend/.env && \
+            docker-compose down || true && \
+            docker-compose pull && \
+            docker-compose up -d"
+          """
         }
       }
     }
 
     stage('Verify Deployment on VM') {
       steps {
-        sshagent(['proxmox-ssh']) {
-          bat """
-            ssh -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
-            "echo ✅ Running containers: && docker ps"
-          """
-        }
+        bat """
+          ssh -i %PRIVATE_KEY% -o StrictHostKeyChecking=no %VM_USER%@%VM_IP% ^
+          "docker ps"
+        """
       }
     }
   }
@@ -98,7 +91,7 @@ pipeline {
       echo '✅ MERN blog app deployed successfully to Proxmox VM!'
     }
     failure {
-      echo '❌ Deployment failed. Check build logs and remote connection.'
+      echo '❌ Deployment failed. Check build logs and SSH connectivity.'
     }
   }
 }
