@@ -1,0 +1,65 @@
+name: Deploy MERN Blog to Azure VM (Self-Hosted)
+
+on:
+  push:
+    branches: ["feature/actions"]   # only run on this branch
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    env:
+      DEPLOY_DIR: /var/www/mern-blog
+      BACKEND_DIR: backend
+      FRONTEND_DIR: frontend
+      PORT: 5000
+      NODE_ENV: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Print runner info (debug)
+        run: |
+          node -v
+          npm -v
+          echo "Running on $(hostname) as $(whoami)"
+
+      - name: Install deps (backend)
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: npm ci || npm install
+
+      - name: Install deps (frontend)
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: npm ci || npm install
+
+      - name: Build frontend
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: npm run build
+
+      - name: Sync files to DEPLOY_DIR
+        run: |
+          mkdir -p $DEPLOY_DIR/backend
+          mkdir -p $DEPLOY_DIR/frontend/build
+          rsync -a --delete ${FRONTEND_DIR}/build/ ${DEPLOY_DIR}/frontend/build/
+          rsync -a --delete ${BACKEND_DIR}/ ${DEPLOY_DIR}/backend/
+
+      - name: Install production deps in DEPLOY_DIR/backend
+        working-directory: ${{ env.DEPLOY_DIR }}/backend
+        run: npm ci --omit=dev || npm install --omit=dev
+
+      - name: Start/Restart backend with PM2
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          NODE_ENV: ${{ env.NODE_ENV }}
+          PORT: ${{ env.PORT }}
+        run: |
+          cd ${DEPLOY_DIR}/backend
+          pm2 describe mern-blog || pm2 start server.js --name mern-blog
+          pm2 restart mern-blog --update-env
+          pm2 save
