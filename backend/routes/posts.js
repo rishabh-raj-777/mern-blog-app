@@ -5,23 +5,25 @@ const router = express.Router();
 // Get all posts
 router.get('/', async (req, res) => {
   const posts = await Post.find();
+
   res.json(posts);
 });
 
 // Create a new post
 router.post('/', async (req, res) => {
-  const { title, content, image } = req.body; // ✅ include image
-  const post = new Post({ title, content, image }); // ✅ include image
+  const { title, content, image } = req.body;
+  const post = new Post({ title, content, image });
   await post.save();
+
   res.json(post);
 });
 
 // Update a post
 router.put('/:id', async (req, res) => {
-  const { title, content, image } = req.body; // ✅ include image
+  const { title, content, image } = req.body;
   const post = await Post.findByIdAndUpdate(
     req.params.id,
-    { title, content, image }, // ✅ include image
+    { title, content, image },
     { new: true }
   );
   res.json(post);

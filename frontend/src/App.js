@@ -10,18 +10,18 @@ const App = () => {
   //   const res = await axios.get('http://10.10.1.50:5000/api/posts');
   //   setPosts(res.data);
   // };
-      const fetchPosts = async () => {
-        try {
-          const res = await axios.get('/api/posts');
-          setPosts(res.data);
-        } catch (err) {
-          console.error("Failed to fetch posts:", err.message);
-        }
-      };
+  const fetchPosts = async () => {
+  try {
+    const res = await axios.get('/api/posts');
+    setPosts(res.data);
+  } catch (err) {
+    console.error("API ERROR:", err);
+  }
+};
 
-  useEffect(() => {
-    fetchPosts();
-  }, []);
+useEffect(() => {
+  fetchPosts();
+}, []);
 
   return (
     <div

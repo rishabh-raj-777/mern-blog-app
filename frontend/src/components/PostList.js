@@ -1,6 +1,7 @@
 import React from 'react';
 
 const PostList = ({ posts, onPostDeleted }) => {
+
   const handleDelete = async (id) => {
     try {
       await fetch(`/api/posts/${id}`, { method: 'DELETE' });
