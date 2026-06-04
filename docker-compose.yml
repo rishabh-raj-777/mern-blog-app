@@ -1,38 +1,17 @@
-version: '3.8'
-
 services:
-  # mongo:
-  #   image: mongo:4.4.24-focal
-  #   container_name: mongo
-  #   restart: unless-stopped
-  #   ports:
-  #     - "27017:27017"
-  #   volumes:
-  #     - mongo-data:/data/db
-  #   networks:
-  #     - blog-net
-
   backend:
-    build:
-      context: ./backend
-    image: rishabhraj7/blog-backend
+    image: rishabhraj7/mern-blog-backend:latest
     container_name: backend
     restart: unless-stopped
     ports:
       - "5000:5000"
     env_file:
     - ./backend/.env
-    #environment:
-    #  - MONGO_URI=${MONGO_URI}
-    # depends_on:
-    #   - mongo
     networks:
       - blog-net
 
   frontend:
-    build:
-      context: ./frontend
-    image: rishabhraj7/blog-frontend
+    image: rishabhraj7/mern-blog-frontend:latest
     container_name: frontend
     restart: unless-stopped
     ports:
