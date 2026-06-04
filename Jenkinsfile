@@ -1,103 +1,122 @@
 pipeline {
-  agent any
+agent any
 
-  environment {
-    IMAGE_FRONTEND = 'rishabhraj7/blog-frontend'
-    IMAGE_BACKEND  = 'rishabhraj7/blog-backend'
-    REPO_URL       = 'https://github.com/rishabh-raj-777/mern-blog-app.git'
-    VM_USER        = 'rishabh123'
-    VM_IP          = '10.10.1.50'
-    APP_DIR        = '/home/rishabh123/apps/mern-blog-app'
-  }
+```
+environment {
+    FRONTEND_IMAGE = "rishabhraj7/mern-blog-frontend"
+    BACKEND_IMAGE  = "rishabhraj7/mern-blog-backend"
+    IMAGE_TAG      = "${BUILD_NUMBER}"
+}
 
-  stages {
-    stage('Clone Repository (Local)') {
-      steps {
-        git branch: 'feature/jenkins', url: "${REPO_URL}"
-      }
-    }
+stages {
 
-    stage('Inject Mongo URI (Local)') {
-      steps {
-        withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
-          sh '''
-            mkdir -p backend
-            echo MONGO_URI=$MONGO_URI > backend/.env
-          '''
+    stage('Checkout Code') {
+        steps {
+            checkout scm
         }
-      }
     }
 
-    stage('Build Docker Images (Local)') {
-      steps {
-        sh 'docker-compose build'
-      }
-    }
-
-    stage('Push to Docker Hub (Local)') {
-      steps {
-        withCredentials([usernamePassword(
-          credentialsId: 'docker-hub-creds',
-          usernameVariable: 'DOCKER_USER',
-          passwordVariable: 'DOCKER_PASS'
-        )]) {
-          sh '''
-            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-            docker push $IMAGE_FRONTEND
-            docker push $IMAGE_BACKEND
-          '''
+    stage('Install Backend Dependencies') {
+        steps {
+            dir('backend') {
+                bat 'npm install'
+            }
         }
-      }
     }
 
-    stage('Test SSH Connection to VM') {
-      steps {
-        sshagent(['proxmox-ssh']) {
-          sh '''
-            ssh -o StrictHostKeyChecking=no $VM_USER@$VM_IP \
-              "echo ✅ SSH connection successful && hostname && whoami"
-          '''
+    stage('Install Frontend Dependencies') {
+        steps {
+            dir('frontend') {
+                bat 'npm install'
+            }
         }
-      }
     }
 
-    stage('Deploy to Proxmox VM') {
-      steps {
-        withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
-          sshagent(['proxmox-ssh']) {
-            sh """
-              ssh -o StrictHostKeyChecking=no $VM_USER@$VM_IP "
-                cd $APP_DIR &&
-                git pull origin feature/jenkins &&
-                echo MONGO_URI=$MONGO_URI > backend/.env &&
-                docker-compose down || true &&
-                docker-compose pull &&
-                docker-compose up -d
-              "
-            """
-          }
+    stage('Build Frontend') {
+        steps {
+            dir('frontend') {
+                bat 'npm run build'
+            }
         }
-      }
     }
 
-    stage('Verify Deployment on VM') {
-      steps {
-        sshagent(['proxmox-ssh']) {
-          sh '''
-            ssh -o StrictHostKeyChecking=no $VM_USER@$VM_IP \
-              "docker ps"
-          '''
+    stage('Docker Login') {
+        steps {
+            withCredentials([
+                usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )
+            ]) {
+
+                bat '''
+                echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                '''
+            }
         }
-      }
     }
-  }
 
-  post {
+    stage('Build Backend Image') {
+        steps {
+            dir('backend') {
+                bat '''
+                docker build -t %BACKEND_IMAGE%:%IMAGE_TAG% .
+                docker tag %BACKEND_IMAGE%:%IMAGE_TAG% %BACKEND_IMAGE%:latest
+                '''
+            }
+        }
+    }
+
+    stage('Build Frontend Image') {
+        steps {
+            dir('frontend') {
+                bat '''
+                docker build -t %FRONTEND_IMAGE%:%IMAGE_TAG% .
+                docker tag %FRONTEND_IMAGE%:%IMAGE_TAG% %FRONTEND_IMAGE%:latest
+                '''
+            }
+        }
+    }
+
+    stage('Push Backend Image') {
+        steps {
+            bat '''
+            docker push %BACKEND_IMAGE%:%IMAGE_TAG%
+            docker push %BACKEND_IMAGE%:latest
+            '''
+        }
+    }
+
+    stage('Push Frontend Image') {
+        steps {
+            bat '''
+            docker push %FRONTEND_IMAGE%:%IMAGE_TAG%
+            docker push %FRONTEND_IMAGE%:latest
+            '''
+        }
+    }
+
+    stage('Docker Logout') {
+        steps {
+            bat 'docker logout'
+        }
+    }
+}
+
+post {
     success {
-      echo '✅ MERN blog app deployed successfully to Proxmox VM!'
+        echo 'Pipeline completed successfully.'
     }
+
     failure {
-      echo '❌ Deployment failed. Check build logs and SSH connectivity.'
+        echo 'Pipeline failed.'
     }
-  }
+
+    always {
+        cleanWs()
+    }
+}
+```
+
 }
