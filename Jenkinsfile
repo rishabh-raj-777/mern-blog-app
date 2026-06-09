@@ -77,6 +77,18 @@ pipeline {
             }
         }
 
+        stage('Debug Docker') {
+            steps {
+                bat '''
+                docker version
+                docker context ls
+                docker images
+                echo BACKEND_IMAGE=%BACKEND_IMAGE%
+                echo IMAGE_TAG=%IMAGE_TAG%
+                '''
+            }
+        }
+
         stage('Push Backend Image') {
             steps {
                 bat '''
